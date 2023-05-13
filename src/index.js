@@ -1,23 +1,29 @@
 import './css/styles.css';
 import axios from 'axios';
 import Notiflix from 'notiflix';
+import SimpleLightbox from "simplelightbox";
+import "simplelightbox/dist/simple-lightbox.min.css";
 
-// Элементы DOM
+
 const searchForm = document.querySelector('#search-form');
 const galleryContainer = document.querySelector('.gallery');
 const loadMoreBtn = document.querySelector('.load-more');
 
-// Параметры поиска
+
 const API_KEY = '36229589-7750e41a399077c1857a2da84';
 let searchQuery = '';
 let page = 1;
 let totalHits = 0;
 
-// Скрываем кнопку "Load more"
+
 loadMoreBtn.classList.add('is-hidden');
 
+const lightbox = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
 
-// Запрос на сервер и рендеринг карточек
+
 async function searchImages() {
   try {
     const { data } = await axios.get('https://pixabay.com/api/', {
@@ -42,10 +48,13 @@ async function searchImages() {
     if (page === 1) {
       totalHits = data.totalHits;
       Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
+      refreshLightbox();
     }
 
     const imagesMarkup = createImagesMarkup(data.hits);
     galleryContainer.insertAdjacentHTML('beforeend', imagesMarkup);
+
+    lightbox.refresh();
 
     if (totalHits - page * 40 > 0) {
       loadMoreBtn.classList.remove('is-hidden');
@@ -60,8 +69,6 @@ async function searchImages() {
 }
 
 
-
-// Обработчик сабмита формы поиска
 function handleSearchFormSubmit(event) {
   event.preventDefault();
   galleryContainer.innerHTML = '';
@@ -78,8 +85,6 @@ function handleSearchFormSubmit(event) {
 }
 
 
-
-// Обработчик клика на кнопке Load more
 async function handleLoadMoreBtnClick() {
   loadMoreBtn.classList.add('is-hidden');
   page += 1;
@@ -92,9 +97,6 @@ async function handleLoadMoreBtnClick() {
   });
 }
 
-
-
-// Создание разметки карточек изображений
 function createImagesMarkup(images) {
   return images
     .map(
@@ -108,29 +110,59 @@ function createImagesMarkup(images) {
         downloads,
       }) => `
         <div class="photo-card gallery__item">
-        <a href="" class="cards-link">
-          <img class="gallery__image" src="${webformatURL}" alt="${tags}" loading="lazy" data-source="${largeImageURL}"/>
-          <div class="info">
-            <p class="info-item">
-              <b>Likes</b> ${likes}
-            </p>
-            <p class="info-item">
-              <b>Views</b> ${views}
-            </p>
-            <p class="info-item">
-              <b>Comments</b> ${comments}
-            </p>
-            <p class="info-item">
-              <b>Downloads</b> ${downloads}
-            </p>
-          </div>
-           </a>
+          <a href="${largeImageURL}" class="cards-link">
+            <img class="gallery__image" src="${webformatURL}" alt="${tags}" loading="lazy" data-source="${largeImageURL}"/>
+            <div class="info">
+              <p class="info-item">
+                <b>Likes</b> ${likes}
+              </p>
+              <p class="info-item">
+                <b>Views</b> ${views}
+              </p>
+              <p class="info-item">
+                <b>Comments</b> ${comments}
+              </p>
+              <p class="info-item">
+                <b>Downloads</b> ${downloads}
+              </p>
+            </div>
+          </a>
         </div>
       `
     )
     .join('');
 }
 
-// Слушатели событий
+
+
+function refreshLightbox() {
+  lightbox.refresh();
+}
+
+
+const scrollThreshold = 300;
+let isLoading = false; 
+
+
+async function handleScroll() {
+  if (isLoading) return; 
+
+  const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
+  const scrolledToBottom =
+    scrollTop + clientHeight >= scrollHeight - scrollThreshold;
+
+  if (scrolledToBottom) {
+    isLoading = true; 
+
+ 
+    page += 1;
+    await searchImages();
+
+    isLoading = false; 
+  }
+}
+
+
+window.addEventListener('scroll', handleScroll);
 searchForm.addEventListener('submit', handleSearchFormSubmit);
 loadMoreBtn.addEventListener('click', handleLoadMoreBtnClick);
