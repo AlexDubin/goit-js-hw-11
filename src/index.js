@@ -24,7 +24,7 @@ const lightbox = new SimpleLightbox('.gallery a', {
 });
 
 
-async function searchImages() {
+async function axiosImages() {
   try {
     const { data } = await axios.get('https://pixabay.com/api/', {
       params: {
@@ -37,6 +37,18 @@ async function searchImages() {
         page: page,
       },
     });
+
+    return data;
+  } catch (error) {
+    throw new Error('Oops! Something went wrong while fetching images.');
+  }
+}
+
+
+
+async function searchImages() {
+  try {
+    const data = await axiosImages();
 
     if (data.hits.length === 0) {
       Notiflix.Notify.warning(
@@ -60,13 +72,16 @@ async function searchImages() {
       loadMoreBtn.classList.remove('is-hidden');
     } else {
       loadMoreBtn.classList.add('is-hidden');
-      Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
+      Notiflix.Notify.info(
+        "We're sorry, but you've reached the end of search results."
+      );
     }
   } catch (error) {
-    Notiflix.Notify.failure('Oops! Something went wrong.');
+    Notiflix.Notify.failure(error.message);
     console.log(error);
   }
 }
+
 
 
 function handleSearchFormSubmit(event) {
